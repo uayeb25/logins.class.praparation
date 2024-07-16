@@ -1,28 +1,23 @@
 import os
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import HTTPException
+
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 import requests
+
+from models.Userlogin import UserRegister
+
 
 load_dotenv()
 
 
 # Inicializar la app de Firebase Admin
-cred = credentials.Certificate("secrets/firebase-adminsdk.json")
+cred = credentials.Certificate("secrets/admin-firebasesdk.json")
 firebase_admin.initialize_app(cred)
 
-app = FastAPI()
-
-# Modelo de datos para la solicitud de registro y login
-class UserRegister(BaseModel):
-    email: str
-    password: str
-
-@app.put("/register")
-async def register_user(user: UserRegister):
+async def register_user_firebase(user: UserRegister):
     try:
         # Crear usuario en Firebase Authentication
         user_record = firebase_auth.create_user(
@@ -39,8 +34,8 @@ async def register_user(user: UserRegister):
             , detail=f"Error al registrar usuario: {e}"
         )
 
-@app.put("/login")
-async def login_user(user: UserRegister):
+
+async def login_user_firebase(user: UserRegister):
     try:
         # Autenticar usuario con Firebase Authentication usando la API REST
         api_key = os.getenv("FIREBASE_API_KEY")  # Reemplaza esto con tu apiKey de Firebase
@@ -65,9 +60,7 @@ async def login_user(user: UserRegister):
             , "idToken": id_token
         }
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error al autenticar usuario: {e}")
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        raise HTTPException(
+            status_code=400
+            , detail=f"Error al autenticar usuario: {e}"
+        )
