@@ -6,11 +6,15 @@ from controllers.o365 import login_o365 , auth_callback_o365
 from controllers.google import login_google , auth_callback_google
 from controllers.firebase import register_user_firebase, login_user_firebase
 
+
 app = FastAPI()
 
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI application with Office 365 SSO"}
+async def hello():
+    return {
+        "Hello": "World"
+        , "date": "2024-07-17"
+    }
 
 @app.get("/login")
 async def login():
@@ -36,3 +40,9 @@ async def register(user: UserRegister):
 @app.post("/login/custom")
 async def login_custom(user: UserRegister):
     return await login_user_firebase(user)
+
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,0 +1,2 @@
+docker buildx build --platform linux/amd64 -t otd-api-dev:latest . --load
+docker run -d -p 8000:8000 --name my-fastapi-container --env-file .env otd-api-dev:latest

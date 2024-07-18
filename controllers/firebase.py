@@ -1,12 +1,14 @@
 import os
+import requests
+
 from dotenv import load_dotenv
 
 from fastapi import HTTPException
 
+
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
-import requests
-
+from utils.database import get_db_connection
 from models.Userlogin import UserRegister
 
 
@@ -24,10 +26,28 @@ async def register_user_firebase(user: UserRegister):
             email=user.email,
             password=user.password
         )
-        return {
-            "message": "Usuario registrado exitosamente"
-            , "user_id": user_record.uid
-        }
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "EXEC otd.create_user @username = ?, @name = ?, @email = ?"
+                , user_record.uid
+                , user.name
+                , user.email
+            )
+            conn.commit()
+            return {
+                "success": True
+                , "message": "Usuario registrado exitosamente"
+            }
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+        finally:
+            cursor.close()
+            conn.close()
+
     except Exception as e:
         raise HTTPException(
             status_code=400
