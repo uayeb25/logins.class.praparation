@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia el resto del código de la aplicación
 COPY . .
 
+# delete .env file
+RUN rm .env
+
 # Expone el puerto que utilizará la aplicación
 EXPOSE 8000
 

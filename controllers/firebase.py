@@ -1,16 +1,22 @@
 import os
 import requests
+import json
+import logging
+import traceback
 
 from dotenv import load_dotenv
-
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
 
 
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
-from utils.database import get_db_connection
+from utils.database import fetch_query_as_json, get_db_connection
+from utils.security import create_jwt_token
 from models.Userlogin import UserRegister
 
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -27,21 +33,22 @@ async def register_user_firebase(user: UserRegister):
             password=user.password
         )
 
-        conn = get_db_connection()
+        conn = await get_db_connection()
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "EXEC otd.create_user @username = ?, @name = ?, @email = ?"
-                , user_record.uid
-                , user.name
-                , user.email
+                "EXEC otd.create_user @username = ?, @name = ?, @email = ?",
+                user_record.uid,
+                user.name,
+                user.email
             )
             conn.commit()
             return {
-                "success": True
-                , "message": "Usuario registrado exitosamente"
+                "success": True,
+                "message": "Usuario registrado exitosamente"
             }
         except Exception as e:
+            firebase_auth.delete_user(user_record.uid)
             conn.rollback()
             raise HTTPException(status_code=500, detail=str(e))
         finally:
@@ -50,10 +57,9 @@ async def register_user_firebase(user: UserRegister):
 
     except Exception as e:
         raise HTTPException(
-            status_code=400
-            , detail=f"Error al registrar usuario: {e}"
+            status_code=400,
+            detail=f"Error al registrar usuario: {e}"
         )
-
 
 async def login_user_firebase(user: UserRegister):
     try:
@@ -70,17 +76,34 @@ async def login_user_firebase(user: UserRegister):
 
         if "error" in response_data:
             raise HTTPException(
-                status_code=400
-                , detail=f"Error al autenticar usuario: {response_data['error']['message']}"
+                status_code=400,
+                detail=f"Error al autenticar usuario: {response_data['error']['message']}"
             )
 
-        id_token = response_data["idToken"]
-        return {
-            "message": "Usuario autenticado exitosamente"
-            , "idToken": id_token
-        }
+        query = f"SELECT active FROM otd.users WHERE email = '{user.email}'"
+
+        try:
+            logger.info(f"QUERY LIST")
+            result_json = await fetch_query_as_json(query)
+            result_dict = json.loads(result_json)
+            return {
+                "message": "Usuario autenticado exitosamente",
+                "idToken": create_jwt_token(
+                    user.email,
+                    result_dict[0]["active"]
+                )
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+
     except Exception as e:
+        error_detail = {
+            "type": type(e).__name__,
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
         raise HTTPException(
-            status_code=400
-            , detail=f"Error al autenticar usuario: {e}"
+            status_code=400,
+            detail=f"Error al registrar usuario: {error_detail}"
         )
