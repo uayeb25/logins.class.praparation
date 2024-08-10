@@ -28,12 +28,17 @@ async def get_db_connection():
         logger.error(f"Database connection error: {str(e)}")
         raise Exception(f"Database connection error: {str(e)}")
 
-async def fetch_query_as_json(query):
+async def fetch_query_as_json(query, is_procedure=False):
     conn = await get_db_connection()
     cursor = conn.cursor()
     logger.info(f"Ejecutando query: {query}")
     try:
         cursor.execute(query)
+
+        if is_procedure and cursor.description is None:
+            conn.commit()
+            return json.dumps([{"status": 200, "message": "Procedure executed successfully"}])
+
         columns = [column[0] for column in cursor.description]
         results = []
         logger.info(f"Columns: {columns}")
