@@ -1,11 +1,13 @@
 from fastapi import FastAPI, Request, Response
 
 from models.UserRegister import UserRegister
+from models.UserLogin import UserLogin
+from models.UserActivation import UserActivation
 from models.Card import Card
 
 from controllers.o365 import login_o365 , auth_callback_o365
 from controllers.google import login_google , auth_callback_google
-from controllers.firebase import register_user_firebase, login_user_firebase, generate_activation_code
+from controllers.firebase import register_user_firebase, login_user_firebase, generate_activation_code, activate_user
 
 from controllers.card import fetch_cards, fetch_card, delete_card, fetch_update_card, fetch_create_card
 
@@ -13,7 +15,7 @@ from controllers.card import fetch_cards, fetch_card, delete_card, fetch_update_
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from utils.security import validate, validate_func
+from utils.security import validate, validate_func, validate_for_inactive
 
 app = FastAPI()
 
@@ -29,10 +31,8 @@ app.add_middleware(
 async def hello():
     return {
         "Hello": "World"
-        , "version": "0.1.16"
+        , "version": "0.1.17"
     }
-
-
 
 
 
@@ -87,11 +87,8 @@ async def register(user: UserRegister):
     return await register_user_firebase(user)
 
 @app.post("/login/custom")
-async def login_custom(user: UserRegister):
+async def login_custom(user: UserLogin):
     return await login_user_firebase(user)
-
-
-
 
 
 
@@ -100,12 +97,20 @@ async def login_custom(user: UserRegister):
 async def user(request: Request):
     return {
         "email": request.state.email
+        , "firstname": request.state.firstname
+        , "lastname": request.state.lastname
     }
 
 @app.post("/user/{email}/code")
 @validate_func
 async def generate_code(request: Request, email: str):
     return await generate_activation_code(email)
+
+@app.put("/user/code/{code}")
+@validate_for_inactive
+async def generate_code(request: Request, code: int):
+    user = UserActivation(email=request.state.email, code=code)
+    return await activate_user(user)
 
 
 if __name__ == "__main__":

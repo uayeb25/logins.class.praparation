@@ -25,13 +25,15 @@ def generate_pkce_challenge(verifier):
 
 
 # Función para crear un JWT
-def create_jwt_token(email: str, active: bool):
+def create_jwt_token(firstname:str, lastname:str, email: str, active: bool):
     expiration = datetime.utcnow() + timedelta(hours=1)  # El token expira en 1 hora
     token = jwt.encode(
         {
+            "firstname": firstname,
+            "lastname": lastname,
             "email": email,
-            "exp": expiration,
             "active": active,
+            "exp": expiration,
             "iat": datetime.utcnow()
         },
         SECRET_KEY,
@@ -49,26 +51,74 @@ def validate(func):
 
         authorization: str = request.headers.get("Authorization")
         if not authorization:
-            raise HTTPException(status_code=403, detail="Authorization header missing")
+            raise HTTPException(status_code=400, detail="Authorization header missing")
+
+
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=400, detail="Invalid authentication scheme")
+
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+
+
+            email = payload.get("email")
+            expired = payload.get("exp")
+            active = payload.get("active")
+            firstname = payload.get("firstname")
+            lastname = payload.get("lastname")
+
+
+
+            if email is None or expired is None or active is None:
+                raise HTTPException(status_code=400, detail="Invalid token")
+
+            if datetime.utcfromtimestamp(expired) < datetime.utcnow():
+                raise HTTPException(status_code=401, detail="Expired token")
+
+            if not active:
+                raise HTTPException(status_code=403, detail="Inactive user")
+
+            # Inyectar el email en el objeto request
+            request.state.email = email
+            request.state.firstname = firstname
+            request.state.lastname = lastname
+        except PyJWTError:
+            raise HTTPException(status_code=401, detail="Invalid token or expired token")
+
+
+
+        return await func(*args, **kwargs)
+    return wrapper
+
+def validate_for_inactive(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        request = kwargs.get('request')
+        if not request:
+            raise HTTPException(status_code=400, detail="Request object not found")
+
+        authorization: str = request.headers.get("Authorization")
+        if not authorization:
+            raise HTTPException(status_code=400, detail="Authorization header missing")
 
         try:
             scheme, token = authorization.split()
             if scheme.lower() != "bearer":
-                raise HTTPException(status_code=403, detail="Invalid authentication scheme")
+                raise HTTPException(status_code=400, detail="Invalid authentication scheme")
 
             payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
 
             email = payload.get("email")
             expired = payload.get("exp")
-            active = payload.get("active")
-            if email is None or expired is None or active is None:
-                raise HTTPException(status_code=403, detail="Invalid token")
+
+            if email is None or expired is None:
+                raise HTTPException(status_code=400, detail="Invalid token")
 
             if datetime.utcfromtimestamp(expired) < datetime.utcnow():
-                raise HTTPException(status_code=403, detail="Expired token")
+                raise HTTPException(status_code=401, detail="Expired token")
 
-            if not active:
-                raise HTTPException(status_code=403, detail="Inactive user")
+
 
             # Inyectar el email en el objeto request
             request.state.email = email

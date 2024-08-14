@@ -5,7 +5,7 @@ az login
 az acr login --name acrotddev
 
 docker tag otd-api-dev:latest acrotddev.azurecr.io/otd-api-dev:latest
-docker tag otd-api-dev:latest acrotddev.azurecr.io/otd-api-dev:0.1.16
+docker tag otd-api-dev:latest acrotddev.azurecr.io/otd-api-dev:0.1.17
 
 docker push acrotddev.azurecr.io/otd-api-dev:latest
-docker push acrotddev.azurecr.io/otd-api-dev:0.1.16
+docker push acrotddev.azurecr.io/otd-api-dev:0.1.17
