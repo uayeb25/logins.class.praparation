@@ -1,15 +1,10 @@
 import json
 import logging
 
-
 from dotenv import load_dotenv
 from fastapi import HTTPException, Depends
-
-
-import firebase_admin
 from utils.database import fetch_query_as_json
 
-# Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

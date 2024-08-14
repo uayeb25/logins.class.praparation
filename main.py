@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Request, Response
 
-from models.Userlogin import UserRegister
+from models.UserRegister import UserRegister
 from models.Card import Card
 
 from controllers.o365 import login_o365 , auth_callback_o365
 from controllers.google import login_google , auth_callback_google
-from controllers.firebase import register_user_firebase, login_user_firebase
+from controllers.firebase import register_user_firebase, login_user_firebase, generate_activation_code
 
 from controllers.card import fetch_cards, fetch_card, delete_card, fetch_update_card, fetch_create_card
 
@@ -13,7 +13,7 @@ from controllers.card import fetch_cards, fetch_card, delete_card, fetch_update_
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from utils.security import validate
+from utils.security import validate, validate_func
 
 app = FastAPI()
 
@@ -80,6 +80,8 @@ async def logingoogle():
 async def authcallbackgoogle(request: Request):
     return await auth_callback_google(request)
 
+
+
 @app.post("/register")
 async def register(user: UserRegister):
     return await register_user_firebase(user)
@@ -99,6 +101,11 @@ async def user(request: Request):
     return {
         "email": request.state.email
     }
+
+@app.post("/user/{email}/code")
+@validate_func
+async def generate_code(request: Request, email: str):
+    return await generate_activation_code(email)
 
 
 if __name__ == "__main__":

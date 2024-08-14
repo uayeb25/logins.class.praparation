@@ -7,7 +7,8 @@ from utils.globalf import validate_sql_injection
 class UserRegister(BaseModel):
     email: str
     password: str
-    name: Optional[str]
+    firstname: str
+    lastname: str
 
     @validator('password')
     def password_validation(cls, value):
@@ -25,9 +26,23 @@ class UserRegister(BaseModel):
 
         return value
 
-    @validator('name')
+    @validator('firstname')
     def name_validation(cls, value):
         if validate_sql_injection(value):
             raise ValueError('Invalid name')
+
+        return value
+
+    @validator('lastname')
+    def name_validation(cls, value):
+        if validate_sql_injection(value):
+            raise ValueError('Invalid name')
+
+        return value
+
+    @validator('email')
+    def email_validation(cls, value):
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", value):
+            raise ValueError('Invalid email address')
 
         return value

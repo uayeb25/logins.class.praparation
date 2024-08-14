@@ -13,6 +13,8 @@ from functools import wraps
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY_FUNC = os.getenv("SECRET_KEY_FUNC")
+
 
 def generate_pkce_verifier():
     return secrets.token_urlsafe(32)
@@ -72,6 +74,24 @@ def validate(func):
             request.state.email = email
         except PyJWTError:
             raise HTTPException(status_code=403, detail="Invalid token or expired token")
+
+        return await func(*args, **kwargs)
+    return wrapper
+
+
+def validate_func(func):
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        request = kwargs.get('request')
+        if not request:
+            raise HTTPException(status_code=400, detail="Request object not found")
+
+        authorization: str = request.headers.get("Authorization")
+        if not authorization:
+            raise HTTPException(status_code=403, detail="Authorization header missing")
+
+        if authorization != SECRET_KEY_FUNC:
+            raise HTTPException(status_code=403, detail="Wrong function key")
 
         return await func(*args, **kwargs)
     return wrapper
