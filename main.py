@@ -31,7 +31,7 @@ app.add_middleware(
 async def hello():
     return {
         "Hello": "World"
-        , "version": "0.1.17"
+        , "version": "0.1.18"
     }
 
 
