@@ -37,28 +37,33 @@ async def hello():
 
 
 @app.get("/cards")
-async def cards(responce: Response):
-    responce.headers["Cache-Control"] = "no-cache"
-    return await fetch_cards()
+@validate
+async def cards(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-cache"
+    return await fetch_cards( request.state.email )
 
 @app.post("/cards")
-async def cards(responce: Response, card: Card):
-    responce.headers["Cache-Control"] = "no-cache"
-    return await fetch_create_card( card.title, card.description )
+@validate
+async def cards(request: Request, response: Response, card: Card):
+    response.headers["Cache-Control"] = "no-cache"
+    return await fetch_create_card( request.state.email,  card.title, card.description )
 
 @app.get("/cards/{id}")
-async def cards(responce: Response, id: int):
-    responce.headers["Cache-Control"] = "no-cache"
-    return await fetch_card(id)
+@validate
+async def cards(request: Request, response: Response ,id: int):
+    response.headers["Cache-Control"] = "no-cache"
+    return await fetch_card(id, request.state.email)
 
 @app.delete("/cards/{id}")
-async def cardDelete(responce: Response, id: int):
-    responce.headers["Cache-Control"] = "no-cache"
-    return await delete_card(id)
+@validate
+async def cardDelete(request: Request, response: Response, id: int):
+    response.headers["Cache-Control"] = "no-cache"
+    return await delete_card(id, request.state.email)
 
 @app.put("/cards/{id}")
-async def cardUpdate(responce: Response, id: int, card: Card):
-    responce.headers["Cache-Control"] = "no-cache"
+@validate
+async def cardUpdate(request: Request, response: Response, id: int, card: Card):
+    response.headers["Cache-Control"] = "no-cache"
     return await fetch_update_card(id, card.title, card.description )
 
 
@@ -94,7 +99,8 @@ async def login_custom(user: UserLogin):
 
 @app.get("/user")
 @validate
-async def user(request: Request):
+async def user(request: Request, response: Response):
+    response.headers["Cache-Control"] = "no-cache";
     return {
         "email": request.state.email
         , "firstname": request.state.firstname
