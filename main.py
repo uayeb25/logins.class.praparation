@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request, Response, File, UploadFile
 
 from models.UserRegister import UserRegister
 from models.UserLogin import UserLogin
@@ -9,13 +9,13 @@ from controllers.o365 import login_o365 , auth_callback_o365
 from controllers.google import login_google , auth_callback_google
 from controllers.firebase import register_user_firebase, login_user_firebase, generate_activation_code, activate_user
 
-from controllers.card import fetch_cards, fetch_card, delete_card, fetch_update_card, fetch_create_card
+from controllers.card import fetch_cards, fetch_card, delete_card, fetch_update_card, fetch_create_card, fetch_upload_card_files, fetch_download_card_files
 
 
 from fastapi.middleware.cors import CORSMiddleware
-
-
 from utils.security import validate, validate_func, validate_for_inactive
+
+
 
 app = FastAPI()
 
@@ -31,7 +31,7 @@ app.add_middleware(
 async def hello():
     return {
         "Hello": "World"
-        , "version": "0.1.18"
+        , "version": "0.1.19"
     }
 
 
@@ -65,6 +65,19 @@ async def cardDelete(request: Request, response: Response, id: int):
 async def cardUpdate(request: Request, response: Response, id: int, card: Card):
     response.headers["Cache-Control"] = "no-cache"
     return await fetch_update_card(id, card.title, card.description )
+
+@app.post("/cards/{id}/files")
+@validate
+async def upload_files(request: Request, response: Response, id: int, files: list[UploadFile] = File(...) ):
+    response.headers["Cache-Control"] = "no-cache"
+    return await fetch_upload_card_files( request.state.email, id, files )
+
+@app.get("/cards/{id}/files")
+@validate
+async def download_files(request: Request, response: Response, id: int):
+    response.headers["Cache-Control"] = "no-cache"
+    return await fetch_download_card_files(id)
+
 
 
 
@@ -117,6 +130,9 @@ async def generate_code(request: Request, email: str):
 async def generate_code(request: Request, code: int):
     user = UserActivation(email=request.state.email, code=code)
     return await activate_user(user)
+
+
+
 
 
 if __name__ == "__main__":
